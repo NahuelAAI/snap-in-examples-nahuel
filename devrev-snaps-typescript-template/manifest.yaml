@@ -1,0 +1,71 @@
+# For reference: https://docs.devrev.ai/snap-ins/references/manifest.
+# Refactor the code based on your business logic.
+
+version: "2"
+
+name: GitHub Commit Tracker
+description:
+  Reflects commits that happen on GitHub in DevRev posting to timeline of a
+  product part.
+
+service_account:
+  display_name: "GitHub-Commit Bot"
+
+# Add any external connection, reference: https://docs.devrev.ai/snap-ins/concepts#connection.
+
+# Add organization level inputs, reference: https://docs.devrev.ai/snap-ins/references/inputs.
+inputs:
+  organization:
+    - name: part_id
+      field_type: id
+      default_value: don:core:dvrv-us-1:devo/XXXXXXX:product/1
+      is_required: true
+      id_type:
+        - product
+      description: The default part on which to post commits.
+      ui:
+        display_name: The part on which to post commits.
+
+# Event source reference: https://docs.devrev.ai/snap-ins/references/event_sources#supported-event-source-types-and-their-event-types.
+event_sources:
+  organization:
+    - name: github-app-source
+      type: flow-custom-webhook
+      description: Event coming from Github app.
+      config:
+        policy: |
+          package rego
+          signature := crypto.hmac.sha256(base64.decode(input.request.body_raw), input.parameters.secret)
+          expected_header := sprintf("sha256=%v", [signature])
+          signature_header_name:= "X-Hub-Signature-256"
+          status_code = 200 {
+            input.request.headers[signature_header_name] == expected_header
+          } else = 401 {
+            true
+          }
+          output = {"event": body, "event_key": event_key} {
+            status_code == 200
+            body := input.request.body
+            event_key := "github-event"
+          } else = {"response": response} {
+            response := {"status_code": status_code}
+          }
+        parameters:
+          secret: SECRET_TOKEN
+      setup_instructions:
+        "Please copy the source URL from here: \n\nURL: `{{
+        source.trigger_url  }}` \n\nSecret:
+        `{{source.config.parameters.secret}}`."
+
+# Functions reference: https://docs.devrev.ai/snap-ins/references/functions.
+functions:
+  - name: on_work_creation
+    description: function to trigger on work creation
+
+# Automations reference: https://docs.devrev.ai/snap-ins/concepts#automation.
+automations:
+  - name: handle-work-created-event
+    source: devrev-event-source
+    event_types:
+      - work_created
+    function: on_work_creation
