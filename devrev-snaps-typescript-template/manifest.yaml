@@ -51,21 +51,18 @@ event_sources:
             response := {"status_code": status_code}
           }
         parameters:
-          secret: SECRET_TOKEN
+          secret: QWgiHuuh48YjGgrvCElFfbmYw9b6dqDr
       setup_instructions:
         "Please copy the source URL from here: \n\nURL: `{{
         source.trigger_url  }}` \n\nSecret:
         `{{source.config.parameters.secret}}`."
 
-# Functions reference: https://docs.devrev.ai/snap-ins/references/functions.
 functions:
-  - name: on_work_creation
-    description: function to trigger on work creation
-
-# Automations reference: https://docs.devrev.ai/snap-ins/concepts#automation.
+  - name: github_handler
+    description: Function to reflect Github activities on DevRev.
 automations:
-  - name: handle-work-created-event
-    source: devrev-event-source
+  - name: github-commit-tracker
+    source: github-app-source
     event_types:
-      - work_created
-    function: on_work_creation
+      - custom:github-event
+    function: github_handler
